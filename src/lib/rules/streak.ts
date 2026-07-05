@@ -1,9 +1,5 @@
 export type CheckInDate = { occurredAt: Date };
 
-function getDate(c: CheckInDate | Date): Date {
-  return c instanceof Date ? c : c.occurredAt;
-}
-
 function toDayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
@@ -17,13 +13,13 @@ function dayDiff(a: Date, b: Date): number {
 }
 
 export function computeStreak(
-  checkIns: (CheckInDate | Date)[],
+  checkIns: CheckInDate[],
   today: Date,
 ): { current: number; longest: number } {
   const todayKey = toDayKey(today);
   const set = new Set<string>();
   for (const c of checkIns) {
-    const d = getDate(c);
+    const d = c.occurredAt;
     if (dayDiff(d, today) < 0) continue; // 未来打卡不计入
     set.add(toDayKey(d));
   }
