@@ -132,6 +132,10 @@ Create `vitest.config.ts`:
 import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 
+// 测试统一用 test.db，避免污染开发库。必须在任何 import lib/db 之前设置，
+// 因为 lib/db.ts 在模块加载时即创建 PrismaClient 单例。
+process.env.DATABASE_URL = 'file:./test.db';
+
 export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
@@ -142,6 +146,8 @@ export default defineConfig({
   },
 });
 ```
+
+> 注：`DATABASE_URL` 必须在 `vitest.config.ts` 顶层设置（而非在 `tests/setup-db.ts` 里），因为 ES 模块 import 会被提升：`setup-db.ts` 若在 import `@/lib/db` 之后才赋值 env，PrismaClient 已用 `.env` 的 dev.db 创建完毕，测试会污染开发库。
 
 - [ ] **Step 2: 冒烟测试确认配置生效**
 
@@ -460,7 +466,7 @@ describe('computeStreak', () => {
 
   it('breaks on a gap', () => {
     const cis = [day(2026, 7, 3), day(2026, 7, 5), day(2026, 7, 6)];
-    expect(computeStreak(cis, day(2026, 7, 6))).toEqual({ current: 2, longest: 3 });
+    expect(computeStreak(cis, day(2026, 7, 6))).toEqual({ current: 2, longest: 2 });
   });
 
   it('dedupes same-day check-ins', () => {
@@ -470,7 +476,7 @@ describe('computeStreak', () => {
 
   it('ignores future check-ins for current', () => {
     const cis = [day(2026, 7, 6), day(2026, 7, 7)];
-    expect(computeStreak(cis, day(2026, 7, 6))).toEqual({ current: 1, longest: 2 });
+    expect(computeStreak(cis, day(2026, 7, 6))).toEqual({ current: 1, longest: 1 });
   });
 });
 ```
@@ -599,9 +605,9 @@ describe('milestoneStatus', () => {
 describe('projectedFinishDate', () => {
   const day = (y: number, m: number, d: number) => new Date(y, m - 1, d);
   it('projects by current rate', () => {
-    // 30 天用了 30M，目标 100M → 还需 70 天
+    // 30 天用了 30M，目标 100M → 还需 70 天；7/1 + 70 天 = 9/9
     const r = projectedFinishDate(30, 100, day(2026, 6, 1), day(2026, 7, 1));
-    expect(r).toEqual(day(2026, 9, 10)); // 7/1 + 70 天
+    expect(r).toEqual(day(2026, 9, 9));
   });
   it('returns null when no progress yet', () => {
     expect(projectedFinishDate(0, 100, day(2026, 6, 1), day(2026, 6, 2))).toBeNull();
@@ -685,8 +691,7 @@ Create `tests/setup-db.ts`:
 ```ts
 import { execSync } from 'node:child_process';
 import { prisma } from '@/lib/db';
-
-process.env.DATABASE_URL = 'file:./test.db';
+// 注意：DATABASE_URL 由 vitest.config.ts 顶层设置，不要在此处赋值（import 提升）。
 
 export async function resetTestDb(): Promise<void> {
   // 确保 test.db schema 最新
