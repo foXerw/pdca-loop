@@ -45,3 +45,26 @@ Created by scaffold + edits (all committed in `671d7ae`):
 1. **`lint` script uses `next lint`**, which is deprecated/removed in Next.js 16 (create-next-app now defaults `lint` to `eslint`). I kept the brief's literal value. If `npm run lint` is expected to work in later tasks, this script may need updating to `eslint`. Flagging for downstream awareness; not changing here because the brief is prescriptive.
 2. **create-next-app refused to run with `.superpowers/` present** (non-empty-dir conflict guard is stricter than the brief anticipated — it does not offer a "continue" prompt, it aborts). I worked around it by temporarily moving `.superpowers/` and `.claude/` out of the project root, running the scaffold, then moving them back (original `.claude/settings.local.json` permission allowlist preserved). No contents lost; verified after restore. Subsequent tasks should not hit this since the scaffold files now exist.
 3. CRLF line-ending warnings from git on Windows — cosmetic only.
+
+## Fix round 1
+
+Addressed two findings from the Task 1 review (both in `package.json`).
+
+### What I changed
+
+- **Finding 1 (lint script):** Changed `"lint"` from `"next lint"` (removed in Next.js 16) to `"eslint ."`. ESLint 9 + `eslint.config.mjs` (from create-next-app) is the working setup; `eslint .` lints the project against that config. (`eslint` with no args also exits 0 but lints nothing, so `.` was chosen to actually invoke linting.)
+- **Finding 2 (test deps location):** Moved `vitest`, `@vitejs/plugin-react`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` from `dependencies` to `devDependencies` via `npm install -D <pkgs>`. `prisma` and `@prisma/client` remain in `dependencies`; `tsx` already in `devDependencies`.
+
+### Commands run + output
+
+1. `npm run lint`
+   - Output: `> eslint .` then no findings; `LINT_EXIT: 0`
+2. `npm run build`
+   - Output: `✓ Compiled successfully in 1179ms`, `✓ Generating static pages ... (4/4)`, `BUILD_EXIT: 0`
+
+### Commit
+
+- SHA: `b780fe680f6959922f60dc847b8026de78e99aaa`
+- Subject: `fix: use eslint for lint script; move test deps to devDependencies`
+- Branch: `phase1-scaffold-data-crud`
+- Files changed: `package.json`, `package-lock.json` (2 files, +180/-19)
