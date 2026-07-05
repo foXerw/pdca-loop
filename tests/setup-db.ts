@@ -1,4 +1,25 @@
-// 占位文件，Task 9 完善：在此创建/迁移测试数据库 schema、清理 test.db 等。
-// 注意：DATABASE_URL 由 vitest.config.ts 顶层设置，不在此处设置
-// （ES 模块 import 会被提升，PrismaClient 单例在 import @/lib/db 时已创建）。
-export {};
+import { execSync } from 'node:child_process';
+import { prisma } from '@/lib/db';
+// 注意：DATABASE_URL 由 vitest.config.ts 顶层设置，不要在此处赋值（import 提升）。
+
+export async function resetTestDb(): Promise<void> {
+  // 确保 test.db schema 最新
+  execSync('npx prisma migrate deploy', {
+    env: { ...process.env, DATABASE_URL: 'file:./test.db' },
+    stdio: 'ignore',
+  });
+  // 清表（顺序尊重外键）
+  await prisma.notification.deleteMany();
+  await prisma.pushSubscription.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.checkIn.deleteMany();
+  await prisma.task.deleteMany();
+  await prisma.milestone.deleteMany();
+  await prisma.plan.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.user.create({ data: { id: 'single-user', name: 'me' } });
+}
+
+export async function getTestUserId(): Promise<string> {
+  return 'single-user';
+}
