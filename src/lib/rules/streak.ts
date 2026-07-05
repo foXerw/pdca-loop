@@ -16,7 +16,6 @@ export function computeStreak(
   checkIns: CheckInDate[],
   today: Date,
 ): { current: number; longest: number } {
-  const todayKey = toDayKey(today);
   const set = new Set<string>();
   for (const c of checkIns) {
     const d = c.occurredAt;
