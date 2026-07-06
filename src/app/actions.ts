@@ -32,6 +32,13 @@ import {
   markAllNotificationsRead,
 } from '@/lib/server/actions/notification';
 import { updateUserSettings } from '@/lib/server/actions/settings';
+import {
+  savePushSubscription,
+  removePushSubscription,
+  dispatchPush,
+  type PushSubscriptionInput,
+} from '@/lib/server/actions/push';
+import { getCurrentUserId } from '@/lib/server/context';
 
 export type ActionState = { error?: string };
 
@@ -331,4 +338,30 @@ export async function updateSettingsAction(
   await updateUserSettings(patch);
   revalidatePath('/');
   return {};
+}
+
+// —— Web Push（客户端 onClick 调用，非表单 action）——
+
+export async function subscribePushAction(
+  sub: PushSubscriptionInput,
+): Promise<{ success: true }> {
+  await savePushSubscription(sub);
+  return { success: true };
+}
+
+export async function unsubscribePushAction(
+  endpoint: string,
+): Promise<{ success: true }> {
+  await removePushSubscription(endpoint);
+  return { success: true };
+}
+
+export async function sendTestPushAction(): Promise<{ sent: number }> {
+  const userId = await getCurrentUserId();
+  const r = await dispatchPush(userId, {
+    title: '测试通知',
+    body: 'pdca-loop 推送已启用 ✅',
+    href: '/',
+  });
+  return { sent: r.sent };
 }
