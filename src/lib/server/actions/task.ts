@@ -38,6 +38,28 @@ export async function listTasksByPlan(planId: string): Promise<Task[]> {
   });
 }
 
+export type TaskWithPlan = Task & { plan: { id: string; title: string } };
+
+// 仪表盘「今日待办」：今日到期且未完成的一次性任务，以及所有循环任务（daily/weekly）。
+// 循环任务不按 status 过滤——它们在 Phase 2 不会被自动重置（调度属 Phase 5）。
+export async function listTodaysTasks(): Promise<TaskWithPlan[]> {
+  const userId = await getCurrentUserId();
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+  return prisma.task.findMany({
+    where: {
+      userId,
+      OR: [
+        { dueAt: { gte: start, lt: end }, status: 'todo' },
+        { recurrence: { in: ['daily', 'weekly'] } },
+      ],
+    },
+    include: { plan: { select: { id: true, title: true } } },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
 export async function completeTask(id: string): Promise<Task> {
   const userId = await getCurrentUserId();
   const existing = await prisma.task.findFirst({ where: { id, userId } });

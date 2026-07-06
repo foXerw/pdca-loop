@@ -2,6 +2,8 @@ import 'server-only';
 import { prisma } from '@/lib/db';
 import { getCurrentUserId } from '@/lib/server/context';
 import { touch, ActionError } from './_shared';
+import { sumProgress } from '@/lib/rules/progress';
+import { computeStreak } from '@/lib/rules/streak';
 import type { Plan } from '@prisma/client';
 
 export type PlanType = 'deadline' | 'ongoing';
@@ -37,6 +39,34 @@ export async function listPlans(): Promise<Plan[]> {
     where: { userId },
     orderBy: { createdAt: 'desc' },
   });
+}
+
+export type PlanOverview = Plan & {
+  progress: number;
+  streak: { current: number; longest: number };
+};
+
+// 仪表盘用：活跃计划 + 进度/streak。个人量级 N+1 可接受，Phase 3 再批量化。
+export async function listActivePlansOverview(): Promise<PlanOverview[]> {
+  const userId = await getCurrentUserId();
+  const plans = await prisma.plan.findMany({
+    where: { userId, status: 'active' },
+    orderBy: { createdAt: 'desc' },
+  });
+  const now = new Date();
+  const result: PlanOverview[] = [];
+  for (const plan of plans) {
+    const cis = await prisma.checkIn.findMany({
+      where: { planId: plan.id, userId },
+      select: { value: true, occurredAt: true },
+    });
+    result.push({
+      ...plan,
+      progress: sumProgress(cis),
+      streak: computeStreak(cis, now),
+    });
+  }
+  return result;
 }
 
 export async function getPlan(id: string): Promise<Plan | null> {
