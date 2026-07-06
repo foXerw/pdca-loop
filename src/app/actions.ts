@@ -27,6 +27,11 @@ import {
   deleteReview,
 } from '@/lib/server/actions/review';
 import type { ReviewPeriod } from '@/lib/rules/review';
+import {
+  markNotificationRead,
+  markAllNotificationsRead,
+} from '@/lib/server/actions/notification';
+import { updateUserSettings } from '@/lib/server/actions/settings';
 
 export type ActionState = { error?: string };
 
@@ -280,6 +285,50 @@ export async function deleteReviewAction(
   if (!id) return { error: '缺少回顾 id' };
   await deleteReview(id);
   revalidatePath('/reviews');
+  revalidatePath('/');
+  return {};
+}
+
+export async function markNotificationReadAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const id = str(fd, 'id');
+  if (!id) return { error: '缺少通知 id' };
+  await markNotificationRead(id);
+  revalidatePath('/');
+  revalidatePath('/notifications');
+  return {};
+}
+
+export async function markAllNotificationsReadAction(
+  _prev: ActionState,
+  _fd: FormData,
+): Promise<ActionState> {
+  await markAllNotificationsRead();
+  revalidatePath('/');
+  revalidatePath('/notifications');
+  return {};
+}
+
+export async function updateSettingsAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const hourStr = str(fd, 'dailyCheckHour');
+  const dayStr = str(fd, 'reviewDayOfWeek');
+  const patch: { dailyCheckHour?: number; reviewDayOfWeek?: number } = {};
+  if (hourStr) {
+    const h = Number(hourStr);
+    if (Number.isNaN(h) || h < 0 || h > 23) return { error: '每日检查时间需为 0-23' };
+    patch.dailyCheckHour = h;
+  }
+  if (dayStr) {
+    const d = Number(dayStr);
+    if (Number.isNaN(d) || d < 0 || d > 6) return { error: '回顾触发日需为 0-6' };
+    patch.reviewDayOfWeek = d;
+  }
+  await updateUserSettings(patch);
   revalidatePath('/');
   return {};
 }
