@@ -7,15 +7,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  plans     Plan[]
-  tasks     Task[]
-  checkIns  CheckIn[]
-  reviews   Review[]
-  notifications Notification[]
-  pushSubs  PushSubscription[]
+  id              String   @id @default(cuid())
+  name            String
+  dailyCheckHour  Int      @default(20) // 每日检查时间（0-23），默认 20:00
+  reviewDayOfWeek Int      @default(0)  // 周回顾触发日（0=周日..6=周六）
+  createdAt       DateTime @default(now())
+  plans           Plan[]
+  tasks           Task[]
+  checkIns        CheckIn[]
+  reviews         Review[]
+  notifications   Notification[]
+  pushSubs        PushSubscription[]
 }
 
 model Plan {
