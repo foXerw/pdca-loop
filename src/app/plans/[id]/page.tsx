@@ -3,11 +3,14 @@ import { notFound } from 'next/navigation';
 import { getPlan } from '@/lib/server/actions/plan';
 import { listTasksByPlan } from '@/lib/server/actions/task';
 import { listCheckIns, getPlanProgress } from '@/lib/server/actions/checkin';
+import { listMilestonesByPlan } from '@/lib/server/actions/milestone';
+import { milestoneStatus, projectedFinishDate } from '@/lib/rules/progress';
 import { ProgressBar } from '@/app/ui/ProgressBar';
 import { TaskList } from './TaskList';
 import { CheckInForm } from './CheckInForm';
 import { PlanStatusControls } from './PlanStatusControls';
 import { EditPlanForm } from './EditPlanForm';
+import { MilestoneList } from './MilestoneList';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,13 +30,26 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
   const plan = await getPlan(id);
   if (!plan) notFound();
 
-  const [tasks, checkIns, { progress, streak }] = await Promise.all([
+  const [tasks, checkIns, { progress, streak }, milestones] = await Promise.all([
     listTasksByPlan(id),
     listCheckIns(id),
     getPlanProgress(id),
+    listMilestonesByPlan(id),
   ]);
 
+  const now = new Date();
+  const milestonesWithStatus = milestones.map((m) => ({
+    ...m,
+    derived: milestoneStatus(m, progress, now),
+  }));
+
   const isDeadline = plan.type === 'deadline';
+  const remaining =
+    isDeadline && plan.targetValue ? Math.max(0, plan.targetValue - progress) : 0;
+  const projected =
+    isDeadline && plan.targetValue
+      ? projectedFinishDate(progress, plan.targetValue, plan.startAt, now)
+      : null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -62,7 +78,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
         {isDeadline ? (
           <div className="space-y-1">
             <ProgressBar value={progress} target={plan.targetValue} />
-            <div className="flex justify-between text-xs text-neutral-500">
+            <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-neutral-500">
               <span>
                 {progress.toLocaleString()}
                 {plan.targetUnit ? ` ${plan.targetUnit}` : ''}
@@ -70,7 +86,13 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
                 {plan.targetValue?.toLocaleString() ?? '—'}
                 {plan.targetUnit ? ` ${plan.targetUnit}` : ''}
               </span>
+              <span>剩余 {remaining.toLocaleString()}{plan.targetUnit ? ` ${plan.targetUnit}` : ''}</span>
               {plan.dueAt && <span>截止 {plan.dueAt.toLocaleDateString('zh-CN')}</span>}
+              {projected && (
+                <span>
+                  按当前速率预计 {projected.toLocaleDateString('zh-CN')} 达成
+                </span>
+              )}
             </div>
           </div>
         ) : (
@@ -80,6 +102,13 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
           </div>
         )}
       </section>
+
+      {isDeadline && (
+        <section className="mt-6">
+          <h2 className="mb-2 text-sm font-medium text-neutral-500">里程碑</h2>
+          <MilestoneList planId={plan.id} milestones={milestonesWithStatus} />
+        </section>
+      )}
 
       <section className="mt-6">
         <h2 className="mb-2 text-sm font-medium text-neutral-500">任务</h2>
