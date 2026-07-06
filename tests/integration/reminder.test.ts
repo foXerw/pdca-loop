@@ -2,6 +2,9 @@ import { vi } from 'vitest';
 
 vi.mock('server-only', () => ({}));
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }));
+vi.mock('web-push', () => ({
+  default: { setVapidDetails: vi.fn(), sendNotification: vi.fn().mockResolvedValue({ statusCode: 201 }) },
+}));
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { resetTestDb, getTestUserId } from '../setup-db';

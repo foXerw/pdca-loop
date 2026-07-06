@@ -6,6 +6,7 @@ import { getUserSettings } from './settings';
 import { listTodaysTasks } from './task';
 import { hasReviewForCurrentWeek } from './review';
 import { listActivePlansOverview } from './plan';
+import { dispatchPush } from './push';
 import { computeDueReminders } from '@/lib/rules/reminder';
 
 // 扫描「到点未完成」项，写 Notification（带去重，每个 key 每天最多一条）。
@@ -71,6 +72,8 @@ export async function runReminderScan(): Promise<{ created: number }> {
       },
     });
     created += 1;
+    // 同步触发浏览器推送（未配 VAPID 时空跑，应用内通知不受影响）
+    await dispatchPush(userId, { title: r.title, body: r.body, href: r.href });
   }
   touch();
   return { created };
