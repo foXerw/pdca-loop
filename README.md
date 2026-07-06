@@ -68,7 +68,26 @@ npm run dev
 - **自托管 / `next start` / `npm run dev`**：`src/instrumentation.ts` 在服务启动时注册一个 `setInterval`（默认 60s，可用 `REMINDER_SCAN_INTERVAL_MS` 环境变量调），自动跑扫描。无需额外配置。
 - **Vercel / serverless**：实例不保活 interval，改用 Vercel Cron 定时 GET `/api/cron/reminders?secret=<CRON_SECRET>`。需在环境变量配置 `CRON_SECRET`（本地开发 `.env` 已预置 `dev-secret`，生产请换成强随机值）。未配置或不匹配返回 401/403。
 
-通知类型：`task_due`（今日待办聚合）、`review_due`（本周回顾未写）、`streak_risk`（ongoing 计划有 streak 但今日未打卡）。每个 key 每天最多一条，自动去重。浏览器 Web Push 需要 Service Worker，留给 Phase 6 与 PWA 一起做。
+通知类型：`task_due`（今日待办聚合）、`review_due`（本周回顾未写）、`streak_risk`（ongoing 计划有 streak 但今日未打卡）。每个 key 每天最多一条，自动去重。浏览器 Web Push 见下节。
+
+## PWA 与浏览器推送
+
+应用是可安装 PWA：`src/app/manifest.ts` 提供 manifest，`public/sw.js` 处理 push 事件，`src/app/ui/ServiceWorkerRegister.tsx` 在布局层注册 SW。图标由 `scripts/gen-icons.mjs`（sharp）从 `public/icon.svg` 生成。
+
+到「每日检查时间」生成的通知会同时通过 Web Push 推送到已订阅设备（即使没开应用）：
+
+- **启用**：`/settings` →「浏览器推送」→「启用浏览器推送」→ 浏览器授权 → 订阅存入 `PushSubscription` 表。
+- **配置**：需在环境变量配置 VAPID 密钥（见 `.env.example`），生成命令 `npx web-push generate-vapid-keys`。未配置时推送空跑，应用内通知仍工作。
+- **iOS**：需先将站点「添加到主屏幕」（PWA 安装）才支持推送，UI 会提示。
+- 离线缓存/预缓存未做（YAGNI，push + 可安装已满足跟进需求）。
+
+## 环境变量
+
+见 `.env.example`：
+
+- `DATABASE_URL`：SQLite 路径（开发 `file:./dev.db`，测试自动用 `test.db`）。
+- `CRON_SECRET`：保护 `/api/cron/reminders`（Vercel Cron 调用时 `?secret=` 校验）。
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`：Web Push VAPID 密钥对。
 
 ## 测试
 
@@ -85,7 +104,7 @@ npm run test:watch  # watch 模式
 - **mock Next 运行时**：集成测试顶部 `vi.mock('server-only')` + `vi.mock('next/cache')`，因为 action 模块在 Next 请求运行时之外会抛错。
 - **组件测试**：`.tsx` 用 `// @vitest-environment jsdom`，`tests/setup-jest-dom.ts` 注册 `@testing-library/jest-dom` 匹配器。
 
-测试覆盖：纯规则（progress/streak/review/reminder）、Server Actions CRUD（plan/task/checkin/milestone/review/notification/settings + 提醒扫描去重）、表单组件条件渲染。
+测试覆盖：纯规则（progress/streak/review/reminder）、Server Actions CRUD（plan/task/checkin/milestone/review/notification/settings/push + 提醒扫描去重）、表单组件条件渲染。Web Push 发送在 `push.test.ts` 用 `vi.mock('web-push')` 覆盖。
 
 ## 代码质量
 
@@ -115,17 +134,23 @@ src/
     notifications/         # 通知列表 + 标记已读
     settings/              # 每日检查时间 / 周回顾触发日
     api/cron/reminders/    # Vercel Cron 触发提醒扫描（CRON_SECRET 校验）
-    ui/                    # ProgressBar / PlanCard / NotificationBell
+    ui/                    # ProgressBar / PlanCard / NotificationBell / ServiceWorkerRegister
+    manifest.ts            # PWA web app manifest
   instrumentation.ts       # 服务启动注册提醒扫描 interval（自托管/next start）
   lib/
     db.ts                  # Prisma 单例（libsql adapter）
     server/context.ts      # getCurrentUserId（个人阶段硬编码 single-user）
-    server/actions/        # 类型化 server action（server-only，可被集成测试复用）
+    server/actions/        # 类型化 server action（server-only，可被集成测试复用）：plan/task/checkin/milestone/review/notification/settings/reminder/push
     rules/                 # 纯函数规则（progress/streak/review/reminder，TDD）
 tests/
   setup-db.ts              # resetTestDb / getTestUserId
   setup-jest-dom.ts        # jsdom 匹配器
-  integration/             # plan/task/checkin/milestone/review/overview/notification/settings/reminder 集成测试
+  integration/             # plan/task/checkin/milestone/review/overview/notification/settings/reminder/push 集成测试
+scripts/
+  gen-icons.mjs            # 从 icon.svg 生成 PNG 图标（sharp）
+public/
+  sw.js                    # Service Worker（push 事件处理）
+  icon.svg icon-192.png icon-512.png apple-icon.png
 ```
 
 ## 架构约定
@@ -147,4 +172,4 @@ tests/
 - [x] Phase 3：里程碑 + 量化进度展示 + streak 展示
 - [x] Phase 4：回顾页 + 周期触发 + 预填
 - [x] Phase 5：通知/提醒调度（应用内；Web Push 推迟到 Phase 6）
-- [ ] Phase 6：PWA + Web Push + 打磨 + E2E 烟测
+- [x] Phase 6：PWA + Web Push + 打磨（E2E 烟测推迟，后续再补）
