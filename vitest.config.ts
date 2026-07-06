@@ -11,7 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    setupFiles: ['tests/setup-jest-dom.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'tests/**/*.test.ts'],
     // 集成测试共享同一个 test.db，且 beforeAll 调用 resetTestDb 重建数据。
     // 并行跑会导致多个文件竞争同一数据库（unique constraint / 数据被中途清空），
     // 因此关闭文件级并行，保证整条套件稳定。
