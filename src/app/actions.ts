@@ -14,6 +14,13 @@ import {
 } from '@/lib/server/actions/plan';
 import { createTask, completeTask, type Recurrence } from '@/lib/server/actions/task';
 import { createCheckIn } from '@/lib/server/actions/checkin';
+import {
+  createMilestone,
+  updateMilestone,
+  setMilestoneStatus,
+  deleteMilestone,
+  type MilestoneStatus,
+} from '@/lib/server/actions/milestone';
 
 export type ActionState = { error?: string };
 
@@ -141,5 +148,74 @@ export async function createCheckInAction(
   await createCheckIn({ planId, taskId, value, note, mood });
   if (planId) revalidatePlan(planId);
   else revalidatePath('/');
+  return {};
+}
+
+export async function createMilestoneAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const planId = str(fd, 'planId');
+  const title = str(fd, 'title');
+  if (!planId) return { error: '缺少计划 id' };
+  if (!title) return { error: '请填写里程碑标题' };
+  const d = str(fd, 'targetDate');
+  if (!d) return { error: '请选择目标日期' };
+  const targetDate = new Date(d);
+  let targetValue: number | undefined;
+  const tv = str(fd, 'targetValue');
+  if (tv) {
+    targetValue = Number(tv);
+    if (Number.isNaN(targetValue)) return { error: '目标值需为数字' };
+  }
+  await createMilestone({ planId, title, targetDate, targetValue });
+  revalidatePlan(planId);
+  return {};
+}
+
+export async function updateMilestoneAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const id = str(fd, 'id');
+  if (!id) return { error: '缺少里程碑 id' };
+  const patch: Parameters<typeof updateMilestone>[1] = {};
+  const title = str(fd, 'title');
+  if (title) patch.title = title;
+  const d = str(fd, 'targetDate');
+  if (d) patch.targetDate = new Date(d);
+  const tv = str(fd, 'targetValue');
+  if (tv) {
+    const n = Number(tv);
+    if (Number.isNaN(n)) return { error: '目标值需为数字' };
+    patch.targetValue = n;
+  }
+  const updated = await updateMilestone(id, patch);
+  revalidatePlan(updated.planId);
+  return {};
+}
+
+export async function setMilestoneStatusAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const id = str(fd, 'id');
+  const status = str(fd, 'status') as MilestoneStatus;
+  if (!id) return { error: '缺少里程碑 id' };
+  if (!['todo', 'done'].includes(status)) return { error: '状态无效' };
+  const updated = await setMilestoneStatus(id, status);
+  revalidatePlan(updated.planId);
+  return {};
+}
+
+export async function deleteMilestoneAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const id = str(fd, 'id');
+  const planId = str(fd, 'planId');
+  if (!id) return { error: '缺少里程碑 id' };
+  await deleteMilestone(id);
+  if (planId) revalidatePlan(planId);
   return {};
 }
