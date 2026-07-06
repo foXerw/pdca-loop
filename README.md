@@ -1,6 +1,8 @@
-# 计划-实施-总结
+# pdca-loop · 计划-实施-总结
 
 PDCA 闭环式个人计划管理 Web 应用。详见 `docs/superpowers/specs/2026-07-06-plan-track-summarize-design.md`。
+
+仓库：https://github.com/foXerw/pdca-loop
 
 ## 开发
 
