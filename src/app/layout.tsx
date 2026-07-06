@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { NotificationBell, type NotificationBellItem } from "./ui/NotificationBell";
+import { ServiceWorkerRegister } from "./ui/ServiceWorkerRegister";
 import { listNotifications, unreadNotificationCount } from "@/lib/server/actions/notification";
 
 const geistSans = Geist({
@@ -18,6 +19,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "pdca-loop",
   description: "PDCA 闭环式个人计划管理",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    title: "pdca-loop",
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +70,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <ServiceWorkerRegister />
         <header className="border-b border-neutral-200 dark:border-neutral-800">
           <nav className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-3">
             <Link href="/" className="font-semibold">
