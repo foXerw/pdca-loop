@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { NotificationBell, type NotificationBellItem } from "./ui/NotificationBell";
+import { listNotifications, unreadNotificationCount } from "@/lib/server/actions/notification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,11 +20,33 @@ export const metadata: Metadata = {
   description: "PDCA 闭环式个人计划管理",
 };
 
-export default function RootLayout({
+export const dynamic = 'force-dynamic';
+
+function parseItem(n: {
+  id: string;
+  type: string;
+  payload: string;
+  readAt: Date | null;
+}): NotificationBellItem {
+  try {
+    const p = JSON.parse(n.payload) as { title: string; body: string; href: string };
+    return { id: n.id, title: p.title, body: p.body, href: p.href, read: !!n.readAt };
+  } catch {
+    return { id: n.id, title: n.type, body: '', href: '/', read: !!n.readAt };
+  }
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [count, notifs] = await Promise.all([
+    unreadNotificationCount(),
+    listNotifications(),
+  ]);
+  const items = notifs.slice(0, 5).map(parseItem);
+
   return (
     <html
       lang="zh-CN"
@@ -46,6 +70,15 @@ export default function RootLayout({
             >
               回顾
             </Link>
+            <Link
+              href="/settings"
+              className="text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            >
+              设置
+            </Link>
+            <div className="ml-auto">
+              <NotificationBell count={count} items={items} />
+            </div>
           </nav>
         </header>
         {children}
