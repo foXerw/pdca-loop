@@ -21,6 +21,12 @@ import {
   deleteMilestone,
   type MilestoneStatus,
 } from '@/lib/server/actions/milestone';
+import {
+  createReview,
+  updateReview,
+  deleteReview,
+} from '@/lib/server/actions/review';
+import type { ReviewPeriod } from '@/lib/rules/review';
 
 export type ActionState = { error?: string };
 
@@ -217,5 +223,63 @@ export async function deleteMilestoneAction(
   if (!id) return { error: '缺少里程碑 id' };
   await deleteMilestone(id);
   if (planId) revalidatePlan(planId);
+  return {};
+}
+
+export async function createReviewAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const period = str(fd, 'period') as ReviewPeriod;
+  if (!['week', 'month', 'quarter', 'custom'].includes(period)) {
+    return { error: '周期无效' };
+  }
+  const planId = str(fd, 'planId') || undefined;
+  const rangeStartStr = str(fd, 'rangeStart');
+  const rangeEndStr = str(fd, 'rangeEnd');
+  if (!rangeStartStr || !rangeEndStr) return { error: '缺少周期范围' };
+  const rangeStart = new Date(rangeStartStr);
+  const rangeEnd = new Date(rangeEndStr);
+  if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) {
+    return { error: '周期范围无效' };
+  }
+  const review = await createReview({
+    planId,
+    period,
+    wentWell: str(fd, 'wentWell'),
+    blocked: str(fd, 'blocked'),
+    adjustments: str(fd, 'adjustments'),
+    rangeStart,
+    rangeEnd,
+  });
+  redirect(`/reviews/${review.id}`);
+}
+
+export async function updateReviewAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const id = str(fd, 'id');
+  if (!id) return { error: '缺少回顾 id' };
+  await updateReview(id, {
+    wentWell: str(fd, 'wentWell'),
+    blocked: str(fd, 'blocked'),
+    adjustments: str(fd, 'adjustments'),
+  });
+  revalidatePath(`/reviews/${id}`);
+  revalidatePath('/reviews');
+  revalidatePath('/');
+  return {};
+}
+
+export async function deleteReviewAction(
+  _prev: ActionState,
+  fd: FormData,
+): Promise<ActionState> {
+  const id = str(fd, 'id');
+  if (!id) return { error: '缺少回顾 id' };
+  await deleteReview(id);
+  revalidatePath('/reviews');
+  revalidatePath('/');
   return {};
 }
