@@ -40,6 +40,12 @@ export default function RootLayout({
             >
               新建计划
             </Link>
+            <Link
+              href="/reviews"
+              className="text-sm text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+            >
+              回顾
+            </Link>
           </nav>
         </header>
         {children}

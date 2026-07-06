@@ -1,14 +1,16 @@
 import Link from 'next/link';
 import { listActivePlansOverview } from '@/lib/server/actions/plan';
 import { listTodaysTasks } from '@/lib/server/actions/task';
+import { hasReviewForCurrentWeek } from '@/lib/server/actions/review';
 import { PlanCard } from './ui/PlanCard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [plans, todaysTasks] = await Promise.all([
+  const [plans, todaysTasks, weekReviewDone] = await Promise.all([
     listActivePlansOverview(),
     listTodaysTasks(),
+    hasReviewForCurrentWeek(),
   ]);
 
   return (
@@ -22,6 +24,16 @@ export default async function Home() {
           + 新建计划
         </Link>
       </div>
+
+      {!weekReviewDone && (
+        <Link
+          href="/reviews/new"
+          className="mt-4 flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+        >
+          <span className="h-2 w-2 rounded-full bg-amber-500" />
+          本周回顾还没写，去补一篇
+        </Link>
+      )}
 
       <section className="mt-6">
         <h2 className="mb-2 text-sm font-medium text-neutral-500">今日待办</h2>
