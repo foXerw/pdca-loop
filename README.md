@@ -24,6 +24,6 @@ npm test               # Vitest（单测 + 集成测，自动用 test.db）
 - [x] Phase 1：脚手架 + 数据模型 + 核心 CRUD + 核心规则（本计划）
 - [x] Phase 2：仪表盘 + 计划页 + 打卡 UI
 - [x] Phase 3：里程碑 + 量化进度展示 + streak 展示
-- [ ] Phase 4：回顾页 + 周期触发 + 预填
+- [x] Phase 4：回顾页 + 周期触发 + 预填
 - [ ] Phase 5：通知/提醒调度 + Web Push
 - [ ] Phase 6：PWA + 打磨 + E2E 烟测
