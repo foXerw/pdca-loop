@@ -9,7 +9,6 @@ import {
   createPlan,
   updatePlan,
   setPlanStatus,
-  type PlanType,
   type PlanStatus,
 } from '@/lib/server/actions/plan';
 import { createTask, completeTask, type Recurrence } from '@/lib/server/actions/task';
@@ -58,25 +57,41 @@ export async function createPlanAction(
 ): Promise<ActionState> {
   const title = str(fd, 'title');
   if (!title) return { error: '请填写标题' };
-  const type = str(fd, 'type') as PlanType;
-  if (type !== 'deadline' && type !== 'ongoing') return { error: '类型无效' };
+  const template = str(fd, 'template') || 'custom';
+
+  // cadence：preset 由 template 决定；custom 读 cadence select
+  let cadence: 'none' | 'daily' | 'weekly';
+  if (template === 'daily') cadence = 'daily';
+  else if (template === 'weekly') cadence = 'weekly';
+  else if (template === 'custom') {
+    const c = str(fd, 'cadence');
+    cadence = c === 'daily' || c === 'weekly' ? c : 'none';
+  } else cadence = 'none';
 
   const description = str(fd, 'description');
+
   let targetValue: number | undefined;
   let targetUnit: string | undefined;
-  let dueAt: Date | undefined;
-  if (type === 'deadline') {
-    const tv = str(fd, 'targetValue');
-    if (tv) {
-      targetValue = Number(tv);
-      if (Number.isNaN(targetValue)) return { error: '目标值需为数字' };
+  const tv = str(fd, 'targetValue');
+  if (tv) {
+    targetValue = Number(tv);
+    if (Number.isNaN(targetValue)) return { error: '目标值需为数字' };
+  }
+  targetUnit = str(fd, 'targetUnit') || undefined;
+
+  const d = str(fd, 'dueAt');
+  const dueAt = d ? new Date(d) : undefined;
+
+  let cadenceTimes: number | undefined;
+  if (cadence === 'weekly') {
+    const ct = str(fd, 'cadenceTimes');
+    if (ct) {
+      cadenceTimes = Number(ct);
+      if (Number.isNaN(cadenceTimes)) return { error: '每周次数需为数字' };
     }
-    targetUnit = str(fd, 'targetUnit') || undefined;
-    const d = str(fd, 'dueAt');
-    dueAt = d ? new Date(d) : undefined;
   }
 
-  const plan = await createPlan({ title, type, description, targetValue, targetUnit, dueAt });
+  const plan = await createPlan({ title, description, cadence, cadenceTimes, targetValue, targetUnit, dueAt });
   redirect(`/plans/${plan.id}`);
 }
 
