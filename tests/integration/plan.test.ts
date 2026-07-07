@@ -17,21 +17,19 @@ beforeAll(async () => {
 describe('plan actions', () => {
   it('creates a deadline plan with target', async () => {
     const p = await createPlan({
-      title: '一亿 token',
-      type: 'deadline',
-      targetValue: 100000000,
-      targetUnit: 'tokens',
+      title: '读 30 本书',
+      targetValue: 30,
+      targetUnit: '本',
       dueAt: new Date(2026, 11, 31),
     });
     expect(p.id).toBeTruthy();
-    expect(p.title).toBe('一亿 token');
+    expect(p.title).toBe('读 30 本书');
     expect(p.userId).toBe(await getTestUserId());
-    expect(p.targetValue).toBe(100000000);
+    expect(p.targetValue).toBe(30);
   });
 
   it('creates an ongoing plan without target', async () => {
-    const p = await createPlan({ title: '学画画', type: 'ongoing' });
-    expect(p.type).toBe('ongoing');
+    const p = await createPlan({ title: '学画画', cadence: 'daily' });
     expect(p.targetValue).toBeNull();
   });
 
@@ -42,20 +40,20 @@ describe('plan actions', () => {
   });
 
   it('gets a plan by id', async () => {
-    const created = await createPlan({ title: 'find me', type: 'ongoing' });
+    const created = await createPlan({ title: 'find me', cadence: 'daily' });
     const got = await getPlan(created.id);
     expect(got?.title).toBe('find me');
   });
 
   it('updates plan fields', async () => {
-    const p = await createPlan({ title: 'edit', type: 'ongoing' });
+    const p = await createPlan({ title: 'edit', cadence: 'daily' });
     const updated = await updatePlan(p.id, { title: 'edited', description: 'd' });
     expect(updated.title).toBe('edited');
     expect(updated.description).toBe('d');
   });
 
   it('sets plan status', async () => {
-    const p = await createPlan({ title: 'status', type: 'ongoing' });
+    const p = await createPlan({ title: 'status', cadence: 'daily' });
     const done = await setPlanStatus(p.id, 'done');
     expect(done.status).toBe('done');
   });

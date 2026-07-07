@@ -3,7 +3,8 @@ import { prisma } from '@/lib/db';
 import { getCurrentUserId } from '@/lib/server/context';
 import { touch, ActionError } from './_shared';
 import { sumProgress } from '@/lib/rules/progress';
-import { computeStreak } from '@/lib/rules/streak';
+import { computeStreak, weekMondayKey } from '@/lib/rules/streak';
+import type { PlanCadence } from '@/lib/rules/kind';
 import type { CheckIn } from '@prisma/client';
 
 export async function createCheckIn(input: {
@@ -44,14 +45,26 @@ export async function listCheckIns(planId: string): Promise<CheckIn[]> {
 export async function getPlanProgress(planId: string): Promise<{
   progress: number;
   streak: { current: number; longest: number };
+  thisPeriodCount: number | null;
 }> {
   const userId = await getCurrentUserId();
-  const cis = await prisma.checkIn.findMany({
-    where: { planId, userId },
-    select: { value: true, occurredAt: true },
-  });
+  const [plan, cis] = await Promise.all([
+    prisma.plan.findFirst({
+      where: { id: planId, userId },
+      select: { cadence: true, cadenceTimes: true },
+    }),
+    prisma.checkIn.findMany({
+      where: { planId, userId },
+      select: { value: true, occurredAt: true },
+    }),
+  ]);
+  const cadence = (plan?.cadence ?? 'none') as PlanCadence;
+  const now = new Date();
   return {
     progress: sumProgress(cis),
-    streak: computeStreak(cis, new Date()),
+    streak: computeStreak(cis, now, cadence, plan?.cadenceTimes ?? undefined),
+    thisPeriodCount: cadence === 'weekly'
+      ? cis.filter((c) => weekMondayKey(c.occurredAt) === weekMondayKey(now)).length
+      : null,
   };
 }

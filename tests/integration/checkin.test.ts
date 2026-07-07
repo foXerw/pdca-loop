@@ -11,14 +11,14 @@ beforeAll(async () => { await resetTestDb(); });
 
 describe('checkin actions', () => {
   it('creates a check-in with value', async () => {
-    const plan = await createPlan({ title: 'token', type: 'deadline', targetValue: 100000000, targetUnit: 'tokens' });
-    const ci = await createCheckIn({ planId: plan.id, value: 5_000_000, note: 'today' });
-    expect(ci.value).toBe(5_000_000);
+    const plan = await createPlan({ title: '读书', cadence: 'none', targetValue: 30, targetUnit: '本' });
+    const ci = await createCheckIn({ planId: plan.id, value: 5, note: 'today' });
+    expect(ci.value).toBe(5);
     expect(ci.planId).toBe(plan.id);
   });
 
   it('lists check-ins newest first', async () => {
-    const plan = await createPlan({ title: 'list', type: 'deadline' });
+    const plan = await createPlan({ title: 'list' });
     await createCheckIn({ planId: plan.id, value: 1, occurredAt: new Date(2026, 6, 1) });
     await createCheckIn({ planId: plan.id, value: 2, occurredAt: new Date(2026, 6, 5) });
     const list = await listCheckIns(plan.id);
@@ -27,7 +27,7 @@ describe('checkin actions', () => {
   });
 
   it('aggregates progress and streak for a plan', async () => {
-    const plan = await createPlan({ title: 'agg', type: 'ongoing' });
+    const plan = await createPlan({ title: 'agg', cadence: 'daily' });
     const today = new Date();
     await createCheckIn({ planId: plan.id, occurredAt: today });
     const yest = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
@@ -38,10 +38,22 @@ describe('checkin actions', () => {
   });
 
   it('sums values as progress', async () => {
-    const plan = await createPlan({ title: 'sum', type: 'deadline', targetValue: 100 });
+    const plan = await createPlan({ title: 'sum', cadence: 'none', targetValue: 100 });
     await createCheckIn({ planId: plan.id, value: 30 });
     await createCheckIn({ planId: plan.id, value: 20 });
     const agg = await getPlanProgress(plan.id);
     expect(agg.progress).toBe(50);
+  });
+
+  it('computes weekly streak and this-period count for a weekly plan', async () => {
+    const plan = await createPlan({ title: '每周跑', cadence: 'weekly', cadenceTimes: 3 });
+    const today = new Date();
+    // 本周打 3 次（同日多次也计入本周计数）
+    await createCheckIn({ planId: plan.id, occurredAt: today });
+    await createCheckIn({ planId: plan.id, occurredAt: today });
+    await createCheckIn({ planId: plan.id, occurredAt: today });
+    const agg = await getPlanProgress(plan.id);
+    expect(agg.streak.current).toBe(1); // 本周达标
+    expect(agg.thisPeriodCount).toBe(3);
   });
 });

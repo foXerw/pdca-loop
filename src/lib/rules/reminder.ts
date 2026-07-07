@@ -12,7 +12,7 @@ export type ReminderInput = {
   settings: { dailyCheckHour: number };
   dueTasks: { id: string; title: string; planId: string }[];
   reviewDueWeek: boolean;
-  atRiskPlans: { id: string; title: string }[];
+  atRiskPlans: { id: string; title: string; cadence: 'daily' | 'weekly'; remaining: number }[];
 };
 
 function dayKey(d: Date): string {
@@ -58,13 +58,23 @@ export function computeDueReminders(input: ReminderInput, now: Date): Reminder[]
   }
 
   for (const p of input.atRiskPlans) {
-    out.push({
-      type: 'streak_risk',
-      key: `streak_risk:${p.id}:${dayKey(now)}`,
-      title: `「${p.title}」今天还没打卡`,
-      body: 'streak 即将断签，去打个卡吧。',
-      href: `/plans/${p.id}`,
-    });
+    if (p.cadence === 'weekly') {
+      out.push({
+        type: 'streak_risk',
+        key: `streak_risk:${p.id}:${weekMondayKey(now)}`,
+        title: `「${p.title}」本周还差 ${p.remaining} 次`,
+        body: '保持节奏，别断签。',
+        href: `/plans/${p.id}`,
+      });
+    } else {
+      out.push({
+        type: 'streak_risk',
+        key: `streak_risk:${p.id}:${dayKey(now)}`,
+        title: `「${p.title}」今天还没打卡`,
+        body: 'streak 即将断签，去打个卡吧。',
+        href: `/plans/${p.id}`,
+      });
+    }
   }
 
   return out;

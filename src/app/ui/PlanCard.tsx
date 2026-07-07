@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { PlanOverview } from '@/lib/server/actions/plan';
+import { planKind } from '@/lib/rules/kind';
 import { ProgressBar } from './ProgressBar';
 
 function formatDate(d: Date): string {
@@ -14,7 +15,8 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function PlanCard({ plan }: { plan: PlanOverview }) {
-  const isDeadline = plan.type === 'deadline';
+  const kind = planKind(plan);
+  const unit = plan.targetUnit ? ` ${plan.targetUnit}` : '';
   return (
     <Link
       href={`/plans/${plan.id}`}
@@ -23,30 +25,40 @@ export function PlanCard({ plan }: { plan: PlanOverview }) {
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="truncate font-medium">{plan.title}</h3>
         <span className="shrink-0 text-xs text-neutral-500">
-          {isDeadline ? '终点型' : '持续型'} · {STATUS_LABEL[plan.status] ?? plan.status}
+          {STATUS_LABEL[plan.status] ?? plan.status}
         </span>
       </div>
 
-      {isDeadline ? (
-        <div className="mt-3 space-y-1">
-          <ProgressBar value={plan.progress} target={plan.targetValue} />
-          <div className="flex justify-between text-xs text-neutral-500">
-            <span>
-              {plan.progress.toLocaleString()}
-              {plan.targetUnit ? ` ${plan.targetUnit}` : ''}
-              {' / '}
-              {plan.targetValue?.toLocaleString() ?? '—'}
-              {plan.targetUnit ? ` ${plan.targetUnit}` : ''}
-            </span>
-            {plan.dueAt && <span>截止 {formatDate(plan.dueAt)}</span>}
+      <div className="mt-3 space-y-1">
+        {kind.isQuantitative ? (
+          <>
+            <ProgressBar value={plan.progress} target={plan.targetValue} />
+            <div className="flex justify-between text-xs text-neutral-500">
+              <span>{plan.progress.toLocaleString()}{unit} / {plan.targetValue?.toLocaleString() ?? '—'}{unit}</span>
+              {plan.dueAt && <span>截止 {formatDate(plan.dueAt)}</span>}
+            </div>
+            {kind.isRecurring && kind.cadence === 'weekly' && plan.thisPeriodCount != null && (
+              <span className="text-xs text-neutral-500">本周 {plan.thisPeriodCount}/{plan.cadenceTimes ?? 1} 次</span>
+            )}
+          </>
+        ) : kind.isRecurring ? (
+          <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
+            {kind.cadence === 'weekly' ? (
+              <>
+                <span>本周 {plan.thisPeriodCount ?? 0}/{plan.cadenceTimes ?? 1} 次</span>
+                <span>连续 {plan.streak.current} 周</span>
+              </>
+            ) : (
+              <>
+                <span>🔥 连续 {plan.streak.current} 天</span>
+                <span>最长 {plan.streak.longest} 天</span>
+              </>
+            )}
           </div>
-        </div>
-      ) : (
-        <div className="mt-3 flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
-          <span>🔥 连续 {plan.streak.current} 天</span>
-          <span>最长 {plan.streak.longest} 天</span>
-        </div>
-      )}
+        ) : (
+          plan.dueAt && <span className="text-xs text-neutral-500">截止 {formatDate(plan.dueAt)}</span>
+        )}
+      </div>
     </Link>
   );
 }

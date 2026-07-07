@@ -21,30 +21,29 @@ beforeAll(async () => {
 describe('milestone actions', () => {
   it('creates a milestone with auto order', async () => {
     const plan = await createPlan({
-      title: '一亿 token',
-      type: 'deadline',
-      targetValue: 100000000,
-      targetUnit: 'tokens',
+      title: '读 30 本书',
+      targetValue: 30,
+      targetUnit: '本',
     });
     const m1 = await createMilestone({
       planId: plan.id,
-      title: '25M',
+      title: '10 本',
       targetDate: new Date(2026, 8, 1),
-      targetValue: 25000000,
+      targetValue: 10,
     });
     const m2 = await createMilestone({
       planId: plan.id,
-      title: '50M',
+      title: '20 本',
       targetDate: new Date(2026, 10, 1),
-      targetValue: 50000000,
+      targetValue: 20,
     });
     expect(m1.order).toBe(0);
     expect(m2.order).toBe(1);
-    expect(m1.targetValue).toBe(25000000);
+    expect(m1.targetValue).toBe(10);
   });
 
   it('lists milestones ordered by order then date', async () => {
-    const plan = await createPlan({ title: 'ordered', type: 'deadline' });
+    const plan = await createPlan({ title: 'ordered' });
     await createMilestone({ planId: plan.id, title: 'A', targetDate: new Date(2026, 11, 1), order: 2 });
     await createMilestone({ planId: plan.id, title: 'B', targetDate: new Date(2026, 0, 1), order: 1 });
     const list = await listMilestonesByPlan(plan.id);
@@ -53,7 +52,7 @@ describe('milestone actions', () => {
   });
 
   it('updates milestone fields', async () => {
-    const plan = await createPlan({ title: 'upd', type: 'deadline' });
+    const plan = await createPlan({ title: 'upd' });
     const m = await createMilestone({ planId: plan.id, title: 'x', targetDate: new Date(2026, 5, 1) });
     const updated = await updateMilestone(m.id, { title: 'y', targetValue: 75 });
     expect(updated.title).toBe('y');
@@ -61,7 +60,7 @@ describe('milestone actions', () => {
   });
 
   it('toggles milestone status', async () => {
-    const plan = await createPlan({ title: 'toggle', type: 'deadline' });
+    const plan = await createPlan({ title: 'toggle' });
     const m = await createMilestone({ planId: plan.id, title: 'm', targetDate: new Date(2026, 5, 1) });
     expect(m.status).toBe('todo');
     const done = await setMilestoneStatus(m.id, 'done');
@@ -69,7 +68,7 @@ describe('milestone actions', () => {
   });
 
   it('deletes a milestone', async () => {
-    const plan = await createPlan({ title: 'del', type: 'deadline' });
+    const plan = await createPlan({ title: 'del' });
     const m = await createMilestone({ planId: plan.id, title: 'gone', targetDate: new Date(2026, 5, 1) });
     await deleteMilestone(m.id);
     const list = await listMilestonesByPlan(plan.id);
@@ -85,7 +84,7 @@ describe('milestone actions', () => {
   });
 
   it('scopes to the current user', async () => {
-    const plan = await createPlan({ title: 'scoped', type: 'deadline' });
+    const plan = await createPlan({ title: 'scoped' });
     await createMilestone({ planId: plan.id, title: 'm', targetDate: new Date(2026, 5, 1) });
     const list = await listMilestonesByPlan(plan.id);
     expect(list.length).toBeGreaterThanOrEqual(1);
