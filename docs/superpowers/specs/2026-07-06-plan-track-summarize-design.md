@@ -11,8 +11,8 @@
 本应用围绕 **PDCA 闭环**（计划 → 执行 → 检查 → 调整）构建一个 Web 应用，主动推送用户跟进，让长期目标和持续练习都"很难彻底忘掉"。
 
 **典型场景**：
-- 终点型目标：年度"用一亿 token 做 AI 编程"——拆里程碑、累计进度对照目标。
-- 持续型目标："学画画"——无终点，靠每日打卡 + streak 维持。
+- 终点型目标（示例）：年度"用一亿 token 做 AI 编程"——拆里程碑、累计进度对照目标。（仅为示例之一；模型支持任意量化/非量化、每日/每周组合，见 2026-07-08 通用化设计）
+- 持续型目标（示例）："学画画"——无终点，靠每日打卡 + streak 维持；"每周跑 3 次"——周节奏 + 周连胜。
 
 ## 2. 范围与取舍
 
@@ -63,7 +63,8 @@
 | **PushSubscription** | Web Push 订阅 | userId, endpoint, keys, createdAt |
 
 ### 设计逻辑
-- **一亿 token**：`Plan(type=deadline, targetValue=100000000, targetUnit="tokens")` → 4 个 `Milestone`（25M/50M/75M/100M 带 targetDate）→ 每次 AI 编程记一条 `CheckIn(value=…)`，进度 = ∑CheckIn.value，对照里程碑 burn-down。
+- **一亿 token**（示例）：`Plan(type=deadline, targetValue=100000000, targetUnit="tokens")` → 4 个 `Milestone`（25M/50M/75M/100M 带 targetDate）→ 每次 AI 编程记一条 `CheckIn(value=…)`，进度 = ∑CheckIn.value，对照里程碑 burn-down。
+- **每周跑 3 次**（示例）：`Plan(cadence=weekly, cadenceTimes=3)` → 每周打卡记 `CheckIn`，本周计数对照 cadenceTimes，周 streak = 连续达标周。
 - **画画**：`Plan(type=ongoing)` → 一个 `Task(recurrence=daily)` → 每天打卡生成 `CheckIn`，streak 由连续 CheckIn 算出，不设终点。
 - **Review** 落脚"总结计划"：定期写"哪些顺 / 哪些卡 / 怎么调整"，调整项可一键落回 Plan/Milestone。
 
