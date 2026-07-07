@@ -5,7 +5,7 @@ import { createCheckInAction, type ActionState } from '@/app/actions';
 
 const MOODS = ['😊', '😐', '😣', '🚀'];
 
-export function CheckInForm({ planId, isDeadline }: { planId: string; isDeadline: boolean }) {
+export function CheckInForm({ planId, isQuantitative }: { planId: string; isQuantitative: boolean }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     createCheckInAction,
     {},
@@ -15,7 +15,7 @@ export function CheckInForm({ planId, isDeadline }: { planId: string; isDeadline
     <form action={formAction} className="space-y-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
       <input type="hidden" name="planId" value={planId} />
 
-      {isDeadline && (
+      {isQuantitative && (
         <div>
           <label htmlFor="value" className="text-sm font-medium">
             数值（可选）

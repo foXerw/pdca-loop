@@ -5,6 +5,7 @@ import { listTasksByPlan } from '@/lib/server/actions/task';
 import { listCheckIns, getPlanProgress } from '@/lib/server/actions/checkin';
 import { listMilestonesByPlan } from '@/lib/server/actions/milestone';
 import { milestoneStatus, projectedFinishDate } from '@/lib/rules/progress';
+import { planKind } from '@/lib/rules/kind';
 import { ProgressBar } from '@/app/ui/ProgressBar';
 import { TaskList } from './TaskList';
 import { CheckInForm } from './CheckInForm';
@@ -30,7 +31,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
   const plan = await getPlan(id);
   if (!plan) notFound();
 
-  const [tasks, checkIns, { progress, streak }, milestones] = await Promise.all([
+  const [tasks, checkIns, { progress, streak, thisPeriodCount }, milestones] = await Promise.all([
     listTasksByPlan(id),
     listCheckIns(id),
     getPlanProgress(id),
@@ -43,13 +44,12 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
     derived: milestoneStatus(m, progress, now),
   }));
 
-  const isDeadline = plan.type === 'deadline';
-  const remaining =
-    isDeadline && plan.targetValue ? Math.max(0, plan.targetValue - progress) : 0;
-  const projected =
-    isDeadline && plan.targetValue
-      ? projectedFinishDate(progress, plan.targetValue, plan.startAt, now)
-      : null;
+  const kind = planKind(plan);
+  const remaining = kind.isQuantitative && plan.targetValue ? Math.max(0, plan.targetValue - progress) : 0;
+  const projected = kind.isQuantitative && plan.targetValue
+    ? projectedFinishDate(progress, plan.targetValue, plan.startAt, now)
+    : null;
+  const showMilestones = kind.hasDeadline || milestones.length > 0;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -62,7 +62,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
 
       <header className="mt-2">
         <div className="flex items-center gap-2 text-xs text-neutral-500">
-          <span>{isDeadline ? '终点型' : '持续型'}</span>
+          <span>{kind.hasDeadline ? '终点型' : '持续型'}</span>
           <span>·</span>
           <span>{STATUS_LABEL[plan.status] ?? plan.status}</span>
         </div>
@@ -75,35 +75,39 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
       </header>
 
       <section className="mt-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-        {isDeadline ? (
+        {kind.isQuantitative ? (
           <div className="space-y-1">
             <ProgressBar value={progress} target={plan.targetValue} />
             <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-neutral-500">
               <span>
-                {progress.toLocaleString()}
-                {plan.targetUnit ? ` ${plan.targetUnit}` : ''}
-                {' / '}
-                {plan.targetValue?.toLocaleString() ?? '—'}
-                {plan.targetUnit ? ` ${plan.targetUnit}` : ''}
+                {progress.toLocaleString()}{plan.targetUnit ? ` ${plan.targetUnit}` : ''}
+                {' / '}{plan.targetValue?.toLocaleString() ?? '—'}{plan.targetUnit ? ` ${plan.targetUnit}` : ''}
               </span>
               <span>剩余 {remaining.toLocaleString()}{plan.targetUnit ? ` ${plan.targetUnit}` : ''}</span>
               {plan.dueAt && <span>截止 {plan.dueAt.toLocaleDateString('zh-CN')}</span>}
-              {projected && (
-                <span>
-                  按当前速率预计 {projected.toLocaleDateString('zh-CN')} 达成
-                </span>
-              )}
+              {projected && <span>按当前速率预计 {projected.toLocaleDateString('zh-CN')} 达成</span>}
             </div>
           </div>
-        ) : (
+        ) : kind.isRecurring ? (
           <div className="flex items-center gap-4 text-sm">
-            <span>🔥 当前连续 {streak.current} 天</span>
-            <span className="text-neutral-500">最长 {streak.longest} 天</span>
+            {kind.cadence === 'weekly' ? (
+              <>
+                <span>本周 {thisPeriodCount ?? 0}/{plan.cadenceTimes ?? 1} 次</span>
+                <span className="text-neutral-500">连续 {streak.current} 周（最长 {streak.longest} 周）</span>
+              </>
+            ) : (
+              <>
+                <span>🔥 当前连续 {streak.current} 天</span>
+                <span className="text-neutral-500">最长 {streak.longest} 天</span>
+              </>
+            )}
           </div>
+        ) : (
+          <p className="text-sm text-neutral-500">无量化目标，靠里程碑推进。</p>
         )}
       </section>
 
-      {isDeadline && (
+      {showMilestones && (
         <section className="mt-6">
           <h2 className="mb-2 text-sm font-medium text-neutral-500">里程碑</h2>
           <MilestoneList planId={plan.id} milestones={milestonesWithStatus} />
@@ -117,7 +121,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ id:
 
       <section className="mt-6">
         <h2 className="mb-2 text-sm font-medium text-neutral-500">打卡</h2>
-        <CheckInForm planId={plan.id} isDeadline={isDeadline} />
+        <CheckInForm planId={plan.id} isQuantitative={kind.isQuantitative} />
       </section>
 
       {checkIns.length > 0 && (
