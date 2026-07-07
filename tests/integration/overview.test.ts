@@ -22,13 +22,12 @@ beforeAll(async () => {
 describe('listActivePlansOverview', () => {
   it('returns only active plans with progress + streak', async () => {
     const deadline = await createPlan({
-      title: '一亿 token',
-      type: 'deadline',
-      targetValue: 100000000,
-      targetUnit: 'tokens',
+      title: '读 30 本书',
+      targetValue: 30,
+      targetUnit: '本',
     });
     await createCheckIn({ planId: deadline.id, value: 30 });
-    const ongoing = await createPlan({ title: '学画画', type: 'ongoing' });
+    const ongoing = await createPlan({ title: '学画画', cadence: 'daily' });
     await createCheckIn({ planId: ongoing.id });
 
     const overview = await listActivePlansOverview();
@@ -47,7 +46,7 @@ describe('listActivePlansOverview', () => {
   });
 
   it('excludes non-active plans', async () => {
-    const p = await createPlan({ title: 'archived', type: 'ongoing' });
+    const p = await createPlan({ title: 'archived', cadence: 'daily' });
     const { setPlanStatus } = await import('@/lib/server/actions/plan');
     await setPlanStatus(p.id, 'archived');
     const overview = await listActivePlansOverview();
@@ -63,7 +62,7 @@ describe('listActivePlansOverview', () => {
 
 describe('listTodaysTasks', () => {
   it('includes tasks due today (todo) and recurring tasks', async () => {
-    const plan = await createPlan({ title: 'today-plan', type: 'ongoing' });
+    const plan = await createPlan({ title: 'today-plan', cadence: 'daily' });
     // 今日到期、未完成 → 命中
     const today = new Date();
     const due = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
@@ -88,7 +87,7 @@ describe('listTodaysTasks', () => {
   });
 
   it('excludes done one-off tasks due today', async () => {
-    const plan = await createPlan({ title: 'done-plan', type: 'ongoing' });
+    const plan = await createPlan({ title: 'done-plan', cadence: 'daily' });
     const today = new Date();
     const due = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
     const t = await createTask({ planId: plan.id, title: '做完了', dueAt: due });

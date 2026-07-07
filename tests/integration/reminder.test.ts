@@ -23,7 +23,7 @@ beforeAll(async () => {
 
 describe('runReminderScan', () => {
   it('creates a task_due notification for today-due todo tasks', async () => {
-    const plan = await createPlan({ title: 'scan-plan', type: 'ongoing' });
+    const plan = await createPlan({ title: 'scan-plan', cadence: 'daily' });
     const today = new Date();
     const due = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12);
     await createTask({ planId: plan.id, title: '今日截止任务', dueAt: due });
@@ -44,7 +44,7 @@ describe('runReminderScan', () => {
   });
 
   it('creates a streak_risk notification for an ongoing plan with streak but no checkin today', async () => {
-    const plan = await createPlan({ title: 'streak-plan', type: 'ongoing' });
+    const plan = await createPlan({ title: 'streak-plan', cadence: 'daily' });
     // 昨天打卡 → streak.current >= 1，但今天没打
     const yesterday = new Date(Date.now() - 86400000);
     await createCheckIn({ planId: plan.id, occurredAt: yesterday });
@@ -61,7 +61,7 @@ describe('runReminderScan', () => {
   });
 
   it('does not flag streak_risk when checked in today', async () => {
-    const plan = await createPlan({ title: 'safe-plan', type: 'ongoing' });
+    const plan = await createPlan({ title: 'safe-plan', cadence: 'daily' });
     await createCheckIn({ planId: plan.id, occurredAt: new Date() }); // 今天已打卡
     await runReminderScan();
     const userId = await getTestUserId();

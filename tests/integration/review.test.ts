@@ -39,7 +39,7 @@ describe('review actions', () => {
   });
 
   it('lists reviews newest-first with optional plan', async () => {
-    const plan = await createPlan({ title: 'review-plan', type: 'ongoing' });
+    const plan = await createPlan({ title: 'review-plan', cadence: 'daily' });
     await createReview({
       planId: plan.id,
       period: 'week',
@@ -93,7 +93,7 @@ describe('getReviewPrefill', () => {
   it('aggregates stats for a plan scope', async () => {
     const plan = await createPlan({
       title: 'prefill-plan',
-      type: 'deadline',
+      cadence: 'none',
       targetValue: 100,
       targetUnit: 'x',
     });

@@ -25,7 +25,6 @@ model Plan {
   userId      String
   title       String
   description String     @default("")
-  type        String?    // 桥接期保留，Task 7 删除
   cadence     String     @default("none") // none | daily | weekly
   cadenceTimes Int?
   status      String     @default("active") // active | paused | done | archived

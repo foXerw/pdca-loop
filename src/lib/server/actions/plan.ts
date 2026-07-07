@@ -7,12 +7,10 @@ import { computeStreak, weekMondayKey } from '@/lib/rules/streak';
 import type { PlanCadence } from '@/lib/rules/kind';
 import type { Plan } from '@prisma/client';
 
-export type PlanType = 'deadline' | 'ongoing'; // 桥接期保留，Task 7 删除
 export type PlanStatus = 'active' | 'paused' | 'done' | 'archived';
 
 export async function createPlan(input: {
   title: string;
-  type?: PlanType | null; // 桥接期可选
   cadence?: PlanCadence;
   cadenceTimes?: number;
   targetValue?: number;
@@ -21,13 +19,11 @@ export async function createPlan(input: {
   description?: string;
 }): Promise<Plan> {
   const userId = await getCurrentUserId();
-  // 桥接：未传 cadence 时从 type 派生（保证旧调用方绿）。Task 7 移除。
-  const cadence: PlanCadence = input.cadence ?? (input.type === 'ongoing' ? 'daily' : 'none');
+  const cadence: PlanCadence = input.cadence ?? 'none';
   const plan = await prisma.plan.create({
     data: {
       userId,
       title: input.title,
-      type: input.type ?? null,
       cadence,
       cadenceTimes: input.cadenceTimes ?? null,
       targetValue: input.targetValue ?? null,
