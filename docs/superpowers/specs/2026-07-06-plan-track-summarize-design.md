@@ -54,7 +54,7 @@
 | 实体 | 作用 | 关键字段 |
 |---|---|---|
 | **User** | 预留多用户扩展 | id, name, createdAt |
-| **Plan** | 一个计划/目标 | title, type(`deadline` \| `ongoing`), status(`active`/`paused`/`done`/`archived`), targetValue?, targetUnit?, startAt, dueAt?, icon, userId |
+| **Plan** | 一个计划/目标 | title, cadence(`none`/`daily`/`weekly`), cadenceTimes?, status(`active`/`paused`/`done`/`archived`), targetValue?, targetUnit?, startAt, dueAt?, icon, userId |
 | **Milestone** | 计划下的阶段节点 | planId, title, targetDate, targetValue?, order, status |
 | **Task** | 具体行动项 | planId, milestoneId?, title, status(`todo`/`done`), dueAt?, recurrence(`none`/`daily`/`weekly`/`custom`), userId |
 | **CheckIn** | 打卡/进度记录（"执行"痕迹） | planId?, taskId?, value?(数值), note, mood?, occurredAt, userId |
@@ -63,9 +63,9 @@
 | **PushSubscription** | Web Push 订阅 | userId, endpoint, keys, createdAt |
 
 ### 设计逻辑
-- **一亿 token**（示例）：`Plan(type=deadline, targetValue=100000000, targetUnit="tokens")` → 4 个 `Milestone`（25M/50M/75M/100M 带 targetDate）→ 每次 AI 编程记一条 `CheckIn(value=…)`，进度 = ∑CheckIn.value，对照里程碑 burn-down。
+- **一亿 token**（示例）：`Plan(cadence=none, targetValue=100000000, targetUnit="tokens", dueAt=年底)` → 4 个 `Milestone`（25M/50M/75M/100M 带 targetDate）→ 每次 AI 编程记一条 `CheckIn(value=…)`，进度 = ∑CheckIn.value，对照里程碑 burn-down。
 - **每周跑 3 次**（示例）：`Plan(cadence=weekly, cadenceTimes=3)` → 每周打卡记 `CheckIn`，本周计数对照 cadenceTimes，周 streak = 连续达标周。
-- **画画**：`Plan(type=ongoing)` → 一个 `Task(recurrence=daily)` → 每天打卡生成 `CheckIn`，streak 由连续 CheckIn 算出，不设终点。
+- **画画**（示例）：`Plan(cadence=daily)` → 一个 `Task(recurrence=daily)` → 每天打卡生成 `CheckIn`，streak 由连续 CheckIn 算出，不设终点。
 - **Review** 落脚"总结计划"：定期写"哪些顺 / 哪些卡 / 怎么调整"，调整项可一键落回 Plan/Milestone。
 
 ## 6. 功能与页面
