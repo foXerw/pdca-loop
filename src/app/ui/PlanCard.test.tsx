@@ -9,7 +9,7 @@ vi.mock('next/link', () => ({ __esModule: true, default: ({ children }: { childr
 afterEach(cleanup);
 
 const base = {
-  id: 'p1', userId: 'u', title: '计划', description: '', type: null,
+  id: 'p1', userId: 'u', title: '计划', description: '',
   cadence: 'none', cadenceTimes: null, status: 'active',
   targetValue: null, targetUnit: null, startAt: new Date(), dueAt: null, icon: null,
   createdAt: new Date(), updatedAt: new Date(),

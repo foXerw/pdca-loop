@@ -36,9 +36,7 @@ describe('computeStreak', () => {
   // 追加到 src/lib/rules/streak.test.ts 的 describe('computeStreak', ...) 内
   // 2026-07-06 是周一；2026-07-08 是周三（本周）。
   const w = (y: number, m: number, d: number) => new Date(y, m - 1, d, 10, 0, 0);
-  const THIS_WEEK = w(2026, 7, 8); // 周三
-  const LAST_WEEK = w(2026, 6, 30); // 上周三（周一 06-29 那周）
-  const TWO_WEEKS_AGO = w(2026, 6, 23); // 上上周三（周一 06-22 那周）
+  const THIS_WEEK = w(2026, 7, 8); // 周三（本周，周一 07-06）
 
   it('weekly: returns 0 when cadence none', () => {
     expect(computeStreak([{ occurredAt: THIS_WEEK }], THIS_WEEK, 'none')).toEqual({ current: 0, longest: 0 });
