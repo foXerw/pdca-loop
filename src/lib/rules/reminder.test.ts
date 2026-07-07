@@ -55,7 +55,7 @@ describe('computeDueReminders', () => {
 
   it('emits a streak_risk reminder per at-risk plan', () => {
     const r = computeDueReminders(
-      at20({ atRiskPlans: [{ id: 'p1', title: '学画画' }] }),
+      at20({ atRiskPlans: [{ id: 'p1', title: '学画画', cadence: 'daily', remaining: 1 }] }),
       AFTER,
     );
     expect(r).toHaveLength(1);
@@ -70,7 +70,10 @@ describe('computeDueReminders', () => {
       at20({
         dueTasks: [{ id: 't1', title: 'a', planId: 'p' }],
         reviewDueWeek: true,
-        atRiskPlans: [{ id: 'p1', title: 'x' }, { id: 'p2', title: 'y' }],
+        atRiskPlans: [
+          { id: 'p1', title: 'x', cadence: 'daily', remaining: 1 },
+          { id: 'p2', title: 'y', cadence: 'weekly', remaining: 2 },
+        ],
       }),
       AFTER,
     );
@@ -79,5 +82,27 @@ describe('computeDueReminders', () => {
 
   it('produces nothing when there is nothing due', () => {
     expect(computeDueReminders(at20({}), AFTER)).toEqual([]);
+  });
+
+  it('emits weekly streak_risk with week-Monday key and remaining count', () => {
+    const r = computeDueReminders(
+      at20({ atRiskPlans: [{ id: 'pw', title: '每周跑', cadence: 'weekly', remaining: 2 }] }),
+      AFTER, // 2026-07-07 周二 → 周一 2026-07-06
+    );
+    expect(r).toHaveLength(1);
+    expect(r[0].type).toBe('streak_risk');
+    expect(r[0].key).toBe('streak_risk:pw:2026-07-06');
+    expect(r[0].title).toBe('「每周跑」本周还差 2 次');
+    expect(r[0].body).toContain('别断签');
+    expect(r[0].href).toBe('/plans/pw');
+  });
+
+  it('daily streak_risk keeps day key and today copy', () => {
+    const r = computeDueReminders(
+      at20({ atRiskPlans: [{ id: 'pd', title: '画画', cadence: 'daily', remaining: 1 }] }),
+      AFTER,
+    );
+    expect(r[0].key).toBe('streak_risk:pd:2026-07-07');
+    expect(r[0].title).toBe('「画画」今天还没打卡');
   });
 });

@@ -26,17 +26,24 @@ export async function runReminderScan(): Promise<{ created: number }> {
     .filter((t) => t.status === 'todo')
     .map((t) => ({ id: t.id, title: t.title, planId: t.planId }));
 
-  // at-risk：ongoing 活跃计划、streak>0、今日未打卡
-  const atRiskPlans: { id: string; title: string }[] = [];
+  // at-risk：循环计划、streak>0、当前周期未达标
+  const atRiskPlans: { id: string; title: string; cadence: 'daily' | 'weekly'; remaining: number }[] = [];
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   for (const p of activePlans) {
-    if (p.type !== 'ongoing' || p.streak.current <= 0) continue;
-    const checkedInToday = await prisma.checkIn.findFirst({
-      where: { planId: p.id, userId, occurredAt: { gte: startOfToday, lt: endOfToday } },
-      select: { id: true },
-    });
-    if (!checkedInToday) atRiskPlans.push({ id: p.id, title: p.title });
+    const cadence = p.cadence as 'none' | 'daily' | 'weekly';
+    if (cadence === 'none' || p.streak.current <= 0) continue;
+    if (cadence === 'daily') {
+      const checkedInToday = await prisma.checkIn.findFirst({
+        where: { planId: p.id, userId, occurredAt: { gte: startOfToday, lt: endOfToday } },
+        select: { id: true },
+      });
+      if (!checkedInToday) atRiskPlans.push({ id: p.id, title: p.title, cadence: 'daily', remaining: 1 });
+    } else {
+      const need = p.cadenceTimes ?? 1;
+      const done = p.thisPeriodCount ?? 0;
+      if (done < need) atRiskPlans.push({ id: p.id, title: p.title, cadence: 'weekly', remaining: need - done });
+    }
   }
 
   const candidates = computeDueReminders(

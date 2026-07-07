@@ -70,4 +70,28 @@ describe('runReminderScan', () => {
     });
     expect(risk).toBeNull();
   });
+
+  it('creates a weekly streak_risk notification when this week under target but last week met', async () => {
+    const plan = await createPlan({ title: '周跑', cadence: 'weekly', cadenceTimes: 3 });
+    // 上周打 3 次（满足）→ 周 streak >=1；本周 0 次 → at-risk
+    const today = new Date();
+    const diffToMonday = (today.getDay() + 6) % 7;
+    const thisMonday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - diffToMonday);
+    const lastMonday = new Date(thisMonday.getFullYear(), thisMonday.getMonth(), thisMonday.getDate() - 7);
+    await createCheckIn({ planId: plan.id, occurredAt: lastMonday });
+    await createCheckIn({ planId: plan.id, occurredAt: new Date(lastMonday.getTime() + 86400000) });
+    await createCheckIn({ planId: plan.id, occurredAt: new Date(lastMonday.getTime() + 2 * 86400000) });
+
+    const { created } = await runReminderScan();
+    expect(created).toBeGreaterThanOrEqual(1);
+
+    const userId = await getTestUserId();
+    const risk = await prisma.notification.findFirst({
+      where: { userId, type: 'streak_risk', payload: { contains: plan.id } },
+    });
+    expect(risk).not.toBeNull();
+    const payload = JSON.parse(risk!.payload);
+    expect(payload.title).toContain('本周还差');
+    expect(payload.body).toContain('别断签');
+  });
 });
