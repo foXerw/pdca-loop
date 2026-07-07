@@ -44,4 +44,16 @@ describe('checkin actions', () => {
     const agg = await getPlanProgress(plan.id);
     expect(agg.progress).toBe(50);
   });
+
+  it('computes weekly streak and this-period count for a weekly plan', async () => {
+    const plan = await createPlan({ title: '每周跑', cadence: 'weekly', cadenceTimes: 3 });
+    const today = new Date();
+    // 本周打 3 次（同日多次也计入本周计数）
+    await createCheckIn({ planId: plan.id, occurredAt: today });
+    await createCheckIn({ planId: plan.id, occurredAt: today });
+    await createCheckIn({ planId: plan.id, occurredAt: today });
+    const agg = await getPlanProgress(plan.id);
+    expect(agg.streak.current).toBe(1); // 本周达标
+    expect(agg.thisPeriodCount).toBe(3);
+  });
 });

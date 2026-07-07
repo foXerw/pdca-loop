@@ -35,7 +35,8 @@ describe('listActivePlansOverview', () => {
     const d = overview.find((p) => p.id === deadline.id)!;
     const o = overview.find((p) => p.id === ongoing.id)!;
     expect(d.progress).toBe(30);
-    expect(d.streak.current).toBeGreaterThanOrEqual(1);
+    expect(d.streak.current).toBe(0); // 量化终点计划非循环，不算 streak
+    expect(d.thisPeriodCount).toBeNull(); // 非周节奏
     expect(o.streak.current).toBeGreaterThanOrEqual(1);
     // 所有返回项都带 progress/streak 字段
     for (const p of overview) {
